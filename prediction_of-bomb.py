@@ -1,33 +1,37 @@
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import AerSimulator
 import numpy as np
-from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
-import random
-#FLITZUR VAIDMAN APPROACH
-def bomb_tester(bomb_present=True):
-    qc = QuantumCircuit(1)
-    qc.h(0)
-    state = Statevector.from_instruction(qc)
-    if bomb_present:
-        p0 = abs(state.data[0])**2
-        p1 = abs(state.data[1])**2
-        r = random.random()
 
-        if r < p1:
-            return "exploded"
-        state = Statevector([1, 0])
-    qc = QuantumCircuit(1)
-    qc.h(0)
-    state = state.evolve(qc)
-    p0 = abs(state.data[0])**2
-    r = random.random()
-    return "D1" if r < p0 else "D2"
-def run_trials(N, bomb_present=True):
-    results = {"D1": 0, "D2": 0, "exploded": 0}
-    for _ in range(N):
-        results[bomb_tester(bomb_present)] += 1
-    return results
-N = 10000
-print("Bomb PRESENT:")
-print(run_trials(N, True))
-print("\nBomb ABSENT:")
-print(run_trials(N, False))
+N = int(input("enter no.of times you want to run the loop: "))
+theta = np.pi/(2*N)
+shots = 5000
+sim = AerSimulator()
+
+# DUD bomb
+qc_dud = QuantumCircuit(1, 1)
+for _ in range(N):
+    qc_dud.ry(2*theta, 0)
+
+qc_dud.measure(0, 0)
+
+tqc = transpile(qc_dud, sim)
+result_dud = sim.run(tqc, shots=shots).result()
+
+print("\nDUD bomb counts:")
+print(result_dud.get_counts())
+
+
+# WORKING bomb
+qc_work = QuantumCircuit(1, 1)
+for _ in range(N):
+    qc_work.ry(2*theta, 0)
+    qc_work.measure(0, 0)
+    qc_work.reset(0)
+
+qc_work.measure(0, 0)
+
+tqcw = transpile(qc_work, sim)
+result_work = sim.run(tqcw, shots=shots).result()
+
+print("\nWORKING bomb counts:")
+print(result_work.get_counts())
